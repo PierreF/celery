@@ -473,6 +473,38 @@ class test_crontab_remaining_estimate:
         assert next.utcoffset().seconds == 7200
         assert next == tz.localize(datetime(2017, 3, 26, 9, 0))
 
+    def test_hour_after_dst_end(self):
+        tzname = "Europe/Paris"
+        self.app.timezone = tzname
+        tz = pytz.timezone(tzname)
+        crontab = self.crontab(minute=10)
+
+        # Set last_run_at just before DST end
+        last_run_at = tz.fromutc(datetime(2017, 10, 29, 0, 10))
+        # Set now after DST end
+        now = tz.fromutc(datetime(2017, 10, 29, 1, 0))
+        crontab.nowfun = lambda: now
+        next = now + crontab.remaining_estimate(last_run_at)
+
+        assert next.utcoffset().seconds == 3600
+        assert next == tz.fromutc(datetime(2017, 10, 29, 1, 10))
+
+    def test_hour_after_dst_start(self):
+        tzname = "Europe/Paris"
+        self.app.timezone = tzname
+        tz = pytz.timezone(tzname)
+        crontab = self.crontab(minute=10)
+
+        # Set last_run_at Before DST start
+        last_run_at = tz.fromutc(datetime(2017, 3, 26, 0, 10))
+        # Set now after DST start
+        now = tz.fromutc(datetime(2017, 3, 26, 1, 0))
+        crontab.nowfun = lambda: now
+        next = now + crontab.remaining_estimate(last_run_at)
+
+        assert next.utcoffset().seconds == 7200
+        assert next == tz.fromutc(datetime(2017, 3, 26, 1, 10))
+
 
 class test_crontab_is_due:
 

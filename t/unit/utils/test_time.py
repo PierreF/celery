@@ -153,6 +153,25 @@ def test_remaining():
     next_run = now + rem_time
     assert next_run == next_actual_time
 
+    """
+    Case 4: DST check using timedelta
+    Suppose start (which is last_run_time) is in EST while next_run is in EDT,
+    then check whether the `next_run` is actually the time specified in the
+    start (i.e. there is not an hour diff due to DST).
+    In 2019, DST starts on March 10
+    """
+    start = eastern_tz.localize(datetime(month=3, day=9, year=2019, hour=10, minute=0))         # EST
+    now = eastern_tz.localize(datetime(day=10, month=3, year=2019, hour=5, minute=0))           # EDT
+    delta = timedelta(hours=23)
+    # `next_actual_time` is the next time to run (derived from delta)
+    next_actual_time = eastern_tz.localize(datetime(day=10, month=3, year=2019, hour=10, minute=0))         # EDT
+    assert start.tzname() == "EST"
+    assert now.tzname() == "EDT"
+    assert next_actual_time.tzname() == "EDT"
+    rem_time = remaining(start, delta, now)
+    next_run = now + rem_time
+    assert next_run == next_actual_time
+
 
 class test_timezone:
 
@@ -308,6 +327,34 @@ class test_ffwd:
     def test_radd_with_unknown_gives_NotImplemented(self):
         x = ffwd(year=2012)
         assert x.__radd__(object()) == NotImplemented
+
+    def test_add_dst_end(self):
+        europe_timezone = pytz.timezone("Europe/Paris")
+        before_dst_end = europe_timezone.localize(datetime(2017, 10, 29, 0, 59))
+        after_dst_end = europe_timezone.localize(datetime(2017, 10, 29, 4, 59))
+
+        delta = ffwd(hour=6, minute=0)
+        want = europe_timezone.localize(datetime(2017, 10, 29, 6))
+
+        result = after_dst_end + delta
+        assert result == want
+
+        result = before_dst_end + delta
+        assert result == want
+
+    def test_add_dst_start(self):
+        europe_timezone = pytz.timezone("Europe/Paris")
+        before_dst_start = europe_timezone.localize(datetime(2017, 3, 26, 0, 59))
+        after_dst_start = europe_timezone.localize(datetime(2017, 3, 26, 4, 59))
+
+        delta = ffwd(hour=6, minute=0)
+        want = europe_timezone.localize(datetime(2017, 3, 26, 6))
+
+        result = after_dst_start + delta
+        assert result == want
+
+        result = before_dst_start + delta
+        assert result == want
 
 
 class test_utcoffset:
